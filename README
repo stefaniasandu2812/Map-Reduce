@@ -1,0 +1,74 @@
+## Tema 2 - APD - Map-Reduce
+## Sandu Stefania-Cristina 334CA
+
+Coordonatorul care se ocupa de cererile pentru procesarea
+seturilor de documente este thread-ul principal, main,
+care citeste, din fisierul dat ca parametru in linia de
+comanda, dimensiunea fragmentului care trebuie procesat
+si pune numele documentelor intr-o lista.
+
+Acesta imparte fiecare document in fragmente de dimensiuni
+fixe, iar printr-un ExecutorService, asigneaza task-urile
+de tip Map worker-ilor. Pentru ca ma intereseaza rezultatul
+task-urilor, am folosit o lista de obiecte Future in care
+voi stoca rezultatele.
+
+Un task de tip map este reprezentat de clasa MapTask, care
+implementeaza interfata `Callable`, primeste numele
+fisierului, offset-ul si dimensiunea care trebuie citita
+si returneaza un obiect ResultTaskMap ca si rezultat.
+
+Task-ul map:
+
+- verifica mai intai daca avem jumatate de cuvant la
+inceputul fragmentului prin verificarea celor doua
+caractere de pe pozitiile consecutive `offset - 1` si
+`offset` daca sunt litere si citeste pana intalneste un
+simbol pentru a calcula noul offset
+
+- in acelasi mod verificam si daca avem jumatate
+de cuvant la sfarsitul fragmentului, obtinand noua
+dimensiune a fragmentului care trebuie procesat
+
+- citim intregul fragment apoi si separam cuvintele,
+adaugand in hashmap-ul local lungimea si nr de aparitii
+a cuvantului respectiv, iar in lista cuvintele de
+lungime maxima
+
+- returnam apoi numele doc-ului, hashmap-ul, lista,
+maximul local al fragmentului si numarul de cuvinte citite
+din acesta de fiecare worker
+
+Inapoi in `main`, iteram prin lista de rezultate si adaugam
+pentru fiecare fisier informatiile procesate. Astfel,
+hashmap-ul va avea key = nume_fisier si
+value = obiect_ReduceObject, in care avem stocate o lista
+de hashmap-uri, o lista de liste, lungimea maxima a unui
+cuvant din fisierul respectiv si numarul de cuvinte din
+acel fisier. Deci, adaug hashmap-ul si lista de cuvinte
+la listele respective si calculez maximul si numarul
+cuvintelor.
+
+Folosesc apoi un ExecutorService nou, care are un numar
+de workeri mai mic decat primul, egal cu numarul de fisiere
+pe care il avem. In mod similar cu primul, dar iterand
+prin hashmap-ul cu rezultate, asignez task-uri de ip Reduce.
+
+Task-ul reduce:
+
+- in etapa de combinare folosim un hashmap local,
+`finalMap` si o lista `finalList` in care vom "concatena"
+hashmap-urile din lista de hashmap-uri si listele de
+cuvinte de lungime maxima
+
+- in etapa de procesare, calculam mai intai suma din
+formula rangului, folosind o functie ce returneaza
+valoarea Fibonacci corespunzatoare, iar apoi rang-ul
+
+- returnam rezultatul printr-un obiect `ResultTaskReduce`,
+care va retine numele fisierului, rang-ul, lungimea maxima
+a unui cuvant si numarul de cuvinte cu lumgimea maxima
+
+La sfarsit adaug rezultatele intr-o lista pe care o sortez
+dupa rang, in ordine descrescatoare si le scriu in
+fisierul de output.
